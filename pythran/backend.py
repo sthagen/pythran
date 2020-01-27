@@ -7,7 +7,7 @@ This module contains all pythran backends.
 from pythran.analyses import LocalNodeDeclarations, GlobalDeclarations, Scope
 from pythran.analyses import YieldPoints, IsAssigned, ASTMatcher, AST_any
 from pythran.analyses import RangeValues, PureExpressions, Dependencies
-from pythran.analyses import Immediates
+from pythran.analyses import Immediates, Ancestors
 from pythran.cxxgen import Template, Include, Namespace, CompilationUnit
 from pythran.cxxgen import Statement, Block, AnnotatedStatement, Typedef, Label
 from pythran.cxxgen import Value, FunctionDeclaration, EmptyStatement, Nop
@@ -441,6 +441,21 @@ class CxxFunction(ast.NodeVisitor):
             )
         return self.process_omp_attachements(node, stmt)
 
+    def is_in_collapse(self, loop, node):
+        for ancestor in reversed(self.ancestors[loop]):
+            if not isinstance(ancestor, ast.For):
+                return False
+            for directive in metadata.get(ancestor, OMPDirective):
+                if 'collapse' in directive.s:
+                    # FIXME: check loop depth and range canonicalization
+                    if node not in self.pure_expressions:
+                        raise PythranSyntaxError(
+                            "not pure expression used as loop target inside a "
+                            "collapse clause",
+                            loop)
+                    return True
+        assert False, "unreachable state"
+
     def gen_for(self, node, target, local_iter, local_iter_decl, loop_body):
         """
         Create For representation on iterator for Cxx generation.
@@ -545,7 +560,7 @@ class CxxFunction(ast.NodeVisitor):
 
         upper_type = iter_type = "long "
         upper_value = self.visit(args[upper_arg])
-        if args[upper_arg] in self.pure_expressions:
+        if self.is_in_collapse(node, args[upper_arg]):
             upper_bound = upper_value  # compatible with collapse
         else:
             upper_bound = "__target{0}".format(id(node))
@@ -840,7 +855,11 @@ class CxxFunction(ast.NodeVisitor):
         test = self.visit(node.test)
         body = self.visit(node.body)
         orelse = self.visit(node.orelse)
-        return "(((bool){0}) ? typename __combined<decltype({1}), decltype({2})>::type({1}) : typename __combined<decltype({1}), decltype({2})>::type({2}))".format(test, body, orelse)
+        return (
+            "(((bool){0}) "
+            "? typename __combined<decltype({1}), decltype({2})>::type({1}) "
+            ": typename __combined<decltype({1}), decltype({2})>::type({2}))"
+        ).format(test, body, orelse)
 
     def visit_List(self, node):
         if not node.elts:  # empty list
@@ -855,8 +874,9 @@ class CxxFunction(ast.NodeVisitor):
             if len(elts) == 1:
                 elts.append('pythonic::types::single_value()')
 
-            node_type = self.types.builder.CombinedTypes(self.types[node],
-                                                         self.types.builder.ListType(elts_type))
+            node_type = self.types.builder.CombinedTypes(
+                self.types[node],
+                self.types.builder.ListType(elts_type))
             return "{0}({{{1}}})".format(
                 self.types.builder.Assignable(node_type),
                 ", ".join(elts))
@@ -1255,7 +1275,7 @@ result_type;
         self.result = None
         super(Cxx, self).__init__(Dependencies, GlobalDeclarations, Types,
                                   Scope, RangeValues, PureExpressions,
-                                  Immediates)
+                                  Immediates, Ancestors)
 
     # mod
     def visit_Module(self, node):
