@@ -215,31 +215,31 @@ std::declval<bool>()))
                 return True
 
             def __add__(self, other):
-                if other in self.types:
-                    return self
+                worklist = list(self.types)
+                while worklist:
+                    item = worklist.pop()
+                    if item is other:
+                        return self
+                    if isinstance(item, CombinedTypes):
+                        worklist.extend(item.types)
                 return Type.__add__(self, other)
 
             def __radd__(self, other):
-                if other in self.types:
-                    return self
-                return Type.__add__(self, other)
+                return self.__add__(other)
 
             def generate(self, ctx):
+                import sys
+                current_recursion_limit = sys.getrecursionlimit()
                 try:
                     return 'typename __combined<{}>::type'.format(
                         ','.join(ctx(t) for t in self.types))
                 except RuntimeError:
                     # this is a situation where we accept to somehow extend
                     # the recursion limit, because of degenerated trees
-                    import sys
-                    current_recursion_limit = sys.getrecursionlimit()
-                    try:
-                        return self.generate(ctx)
-                    except RuntimeError:
-                        sys.setrecursionlimit(current_recursion_limit * 2)
-                        return self.generate(ctx)
-                    finally:
-                        sys.setrecursionlimit(current_recursion_limit)
+                    sys.setrecursionlimit(current_recursion_limit * 2)
+                    res = self.generate(ctx)
+                    sys.setrecursionlimit(current_recursion_limit)
+                    return res
 
         class ArgumentType(Type):
             """
