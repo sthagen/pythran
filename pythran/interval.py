@@ -35,9 +35,15 @@ class Interval(object):
     def bounds(self):
         return self.low, self.high
 
+    def __contains__(self, value):
+        return self.low <= value <= self.high
+
     def union(self, other):
         """ Intersect current range with other."""
         return Interval(min(self.low, other.low), max(self.high, other.high))
+
+    def intersect(self, other):
+        return Interval(max(self.low, other.low), min(self.high, other.high))
 
     def copy(self):
         return Interval(self.low, self.high)
@@ -254,7 +260,7 @@ class Interval(object):
         """
         if self.high < other.low:
             return Interval(1, 1)
-        if self.low > other.high:
+        if self.low >= other.high:
             return Interval(0, 0)
         return Interval(0, 1)
 
@@ -298,7 +304,7 @@ class Interval(object):
         """
         if self.low > other.high:
             return Interval(1, 1)
-        if self.high < other.low:
+        if self.high <= other.low:
             return Interval(0, 0)
         return Interval(0, 1)
 
@@ -384,6 +390,12 @@ class IntervalTuple(object):
         return IntervalTuple(x.union(y) for x, y in zip(self.values,
                                                         other.values))
 
+    def intersect(self, other):
+        if isinstance(other, Interval):
+            return UNKNOWN_RANGE
+        return IntervalTuple(x.intersect(y) for x, y in zip(self.values,
+                                                            other.values))
+
     @property
     def high(self):
         return UNKNOWN_RANGE.high
@@ -428,9 +440,9 @@ def range_values(args):
         if is_neg and is_pos:
             return UNKNOWN_RANGE
         elif is_neg:
-            return Interval(args[1].low, args[0].high)
+            return Interval(args[1].low, args[0].high - 1)
         else:
-            return Interval(args[0].low, args[1].high)
+            return Interval(args[0].low, args[1].high - 1)
 
 
 def bool_values(_):

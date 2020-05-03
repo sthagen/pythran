@@ -32,6 +32,7 @@ class ExtendedSyntaxCheck(ModuleAnalysis):
     def __init__(self):
         self.result = None
         self.update = False
+        self.inassert = False
         self.functions = set()
         ModuleAnalysis.__init__(self, StrictAliases, ArgumentEffects)
 
@@ -59,6 +60,16 @@ class ExtendedSyntaxCheck(ModuleAnalysis):
             self.functions.add(node.name)
         self.generic_visit(node)
 
+    def check_assert(self, node, arg):
+        if self.inassert:
+            raise PythranSyntaxError("Cannot call a function with side effect "
+                                     "in an assert", node)
+
+    def visit_Assert(self, node):
+        self.inassert = True
+        self.generic_visit(node)
+        self.inassert = False
+
     def is_immutable_constant(self, node):
         if isinstance(node, ast.Constant):
             return True
@@ -66,10 +77,17 @@ class ExtendedSyntaxCheck(ModuleAnalysis):
         if isinstance(node, ast.Tuple):
             return all(self.is_immutable_constant(elt) for elt in node.elts)
 
-        if isinstance(node, (ast.Call, ast.Attribute)):
+        if isinstance(node, ast.UnaryOp):
+            return self.is_immutable_constant(node.operand)
+
+        if isinstance(node, (ast.Attribute, ast.Call)):
+            target = getattr(node, 'func', node)
             try:
-                aliases = self.strict_aliases[node]
+                aliases = self.strict_aliases[target]
             except KeyError:
+                return False
+
+            if not aliases:
                 return False
 
             if all(is_global_constant(alias) for alias in aliases):
@@ -146,3 +164,4 @@ class ExtendedSyntaxCheck(ModuleAnalysis):
             if i not in argument_effects:
                 continue
             self.check_global(node, arg)
+            self.check_assert(node, arg)

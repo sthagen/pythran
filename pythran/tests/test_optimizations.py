@@ -231,11 +231,26 @@ def readonce_cycle2(n):
 
         self.check_ast(init, ref, ["pythran.optimizations.IterTransformation"])
 
+    def test_readonce_tuple(self):
+        init = "def foo(l): return sum(tuple(l))"
+        ref = """def foo(l):
+    return builtins.sum(l)"""
+
+        self.check_ast(init, ref, ["pythran.optimizations.IterTransformation"])
+
     def test_readonce_array(self):
         init = "def foo(l): import numpy as np; return sum(np.array(l))"
         ref = """import numpy as __pythran_import_numpy
 def foo(l):
     return builtins.sum(l)"""
+
+        self.check_ast(init, ref, ["pythran.optimizations.IterTransformation"])
+
+    def test_readonce_np_sum_copy(self):
+        init = "def foo(l): import numpy as np; return np.sum(np.copy(l))"
+        ref = """import numpy as __pythran_import_numpy
+def foo(l):
+    return __pythran_import_numpy.sum(l)"""
 
         self.check_ast(init, ref, ["pythran.optimizations.IterTransformation"])
 
@@ -299,6 +314,11 @@ def foo():
                         j = i
                 return j'''
         ref = init
+        self.check_ast(init, ref, ["pythran.optimizations.ForwardSubstitution"])
+
+    def test_forwarding1(self):
+        init = 'def f(i):\n while i:\n  if i > 3: x=1; continue\n  x=2\n return x'
+        ref = 'def f(i):\n    while i:\n        if (i > 3):\n            x = 1\n            continue\n        x = 2\n    return x'
         self.check_ast(init, ref, ["pythran.optimizations.ForwardSubstitution"])
 
     def test_full_unroll0(self):
