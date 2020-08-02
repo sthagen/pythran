@@ -496,10 +496,10 @@ def assign_ndarray(t):
         self.run_test("def np_sliced8(a): a[1:2] = 1 ; return a", numpy.arange(12).reshape(3,2,2), np_sliced8=[NDArray[int, :,:,:]])
 
     def test_sliced9(self):
-        self.run_test("def np_sliced9(a): from numpy import arange ; a[1:2] = arange(4).reshape((1,2,2)) ; return a", numpy.arange(12).reshape(3,2,2), np_sliced9=[NDArray[int, :,:,:]])
+        self.run_test("def np_sliced9(a): from numpy import arange ; a[1:2] = arange(4.).reshape((1,2,2)) ; return a", numpy.arange(12.).reshape(3,2,2), np_sliced9=[NDArray[float, :,:,:]])
 
     def test_sliced10(self):
-        self.run_test("def np_sliced10(a): from numpy import arange ; a[1:-1:2] = arange(4).reshape((1,2,2)) ; return a", numpy.arange(12).reshape(3,2,2), np_sliced10=[NDArray[int, :,:,:]])
+        self.run_test("def np_sliced10(a): from numpy import arange ; a[1:-1:2] = arange(4.).reshape((1,2,2)) ; return a", numpy.arange(12.).reshape(3,2,2), np_sliced10=[NDArray[float, :,:,:]])
 
     def test_sliced11(self):
         self.run_test("def np_sliced11(a): return a[1::-2]", numpy.arange(12).reshape(3,2,2), np_sliced11=[NDArray[int, :,:,:]])
@@ -541,6 +541,23 @@ def assign_ndarray(t):
     def test_newaxis7(self):
         self.run_test("def np_newaxis7(a): from numpy import newaxis; return a[newaxis,1:,newaxis,:1,newaxis]",
                       numpy.ones((2,3)), np_newaxis7=[NDArray[float, :,: ]])
+
+    def test_newaxis8(self):
+        code = '''
+import numpy as np
+def A(N):
+    return B(N + 1)[0:-1]
+def B(M):
+    if M == 1: return np.ones(1, float)
+    n = np.arange(0, M)
+    return 0.5 - 0.5*np.cos(2.0*np.pi*n/(M-1))
+def newaxis8(n):
+    p = 0.5
+    w = np.power(A(n),p)[:,None]
+    return w'''
+        self.run_test(code,
+                      5,
+                      newaxis8=[int])
 
     def test_gexpr_composition0(self):
         self.run_test("def gexpr_composition0(a): return a[:,:,:][1]",
@@ -881,6 +898,27 @@ def assign_ndarray(t):
                       numpy.array([[1]]),
                       bool_conversion_4=[NDArray[int, :,:]])
 
+    def test_complex_conversion0(self):
+        code = '''
+import numpy as np
+
+def test1(input):
+    fftSize = 1024
+    NN = 10
+    MM = fftSize // 2+1
+    Out = np.empty((MM, NN), dtype=np.complex64)
+    for frm in range(NN):
+        X = np.fft.rfft(input[0:fftSize],fftSize)
+        Out[:,frm] = X
+    return Out
+
+def complex_conversion0(x):
+    return test1(x)
+'''
+        self.run_test(code, numpy.array([10.]*10),
+                      complex_conversion0=[NDArray[float, :]])
+
+
     def test_numpy_lazy_gexpr(self):
         code = '''
             import numpy as np
@@ -899,6 +937,20 @@ def assign_ndarray(t):
         self.run_test(code,
                       10, "b", 10, 10,
                       numpy_lazy_gexpr=[int, str, int, int])
+
+    def test_numpy_lazy_gexpr2(self):
+        code = '''
+            import numpy as np
+            def numpy_lazy_gexpr2(c, y):
+                z = [0] * 2
+                if c:
+                    x = y[1:3]
+                z[0] = x[0]
+                z[1] = x[1]
+                return z'''
+        self.run_test(code,
+                      1, numpy.array([1,2,3,4]),
+                      numpy_lazy_gexpr2=[int, NDArray[int, :]])
 
     def test_fexpr0(self):
         code = '''
@@ -1174,3 +1226,48 @@ def hanning(M):
         self.run_test(code,
                       numpy.arange(200.).reshape(10, 20),
                       subscripting_slice_array_transpose=[NDArray[float, :, :]])
+
+    def test_combiner_0(self):
+        code = '''
+import numpy as np
+def test_combiner_0(X):
+    O=test1(X[:,0], False)
+    P=test1(X[:,0], True)   # <- Ask to concatenate
+    return O,P
+
+def test1(X,A):
+    N = 20
+    if A:
+        X = np.concatenate((np.zeros(N),X))
+    return X'''
+        self.run_test(code, numpy.ones((10,10)), test_combiner_0=[NDArray[float,:,:]])
+
+    def test_combiner_1(self):
+        code = '''
+import numpy as np
+def test_combiner_1(X):
+    O=test1(X[0], False)
+    P=test1(X[1], True)   # <- Ask to concatenate
+    return O,P
+
+def test1(X,A):
+    N = 20
+    if A:
+        X = np.concatenate((np.zeros((N)),X))
+    return X'''
+        self.run_test(code, numpy.ones((10,10)), test_combiner_1=[NDArray[float,:,:]])
+
+    def test_combiner_2(self):
+        code = '''
+import numpy as np
+def test_combiner_2(X):
+    O=test1(X[X==1], False)
+    P=test1(X[X==1], True)   # <- Ask to concatenate
+    return O,P
+
+def test1(X,A):
+    N = 20
+    if A:
+        X = np.concatenate((np.zeros((N)),X))
+    return X'''
+        self.run_test(code, numpy.ones((10)), test_combiner_2=[NDArray[float,:]])

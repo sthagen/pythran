@@ -68,38 +68,35 @@ operator_to_lambda = {
     ast.And: make_and,
     ast.Or: make_or,
     # operator
-    ast.Add: "(pythonic::operator_::add({0}, {1}))".format,
-    ast.Sub: "({0} - {1})".format,
-    ast.Mult: "(pythonic::operator_::mul({0}, {1}))".format,
-    ast.Div: "(pythonic::operator_::div({0}, {1}))".format,
-    ast.Mod: "(pythonic::operator_::mod({0}, {1}))".format,
-    ast.Pow: "(pythonic::builtins::pow({0}, {1}))".format,
-    ast.LShift: "({0} << {1})".format,
-    ast.RShift: "({0} >> {1})".format,
-    ast.BitOr: "({0} | {1})".format,
-    ast.BitXor: "({0} ^ {1})".format,
-    ast.BitAnd: "({0} & {1})".format,
-    ast.MatMult: "(pythonic::operator_::matmul({0}, {1}))".format,
-    ast.FloorDiv:
-        "(pythonic::operator_::functor::floordiv{{}}({0}, {1}))".format,
+    ast.Add: "pythonic::operator_::add({0}, {1})".format,
+    ast.Sub: "pythonic::operator_::sub({0}, {1})".format,
+    ast.Mult: "pythonic::operator_::mul({0}, {1})".format,
+    ast.Div: "pythonic::operator_::div({0}, {1})".format,
+    ast.Mod: "pythonic::operator_::mod({0}, {1})".format,
+    ast.Pow: "pythonic::builtins::pow({0}, {1})".format,
+    ast.LShift: "pythonic::operator_::lshift({0}, {1})".format,
+    ast.RShift: "pythonic::operator_::rshift({0}, {1})".format,
+    ast.BitOr: "pythonic::operator_::or_({0}, {1})".format,
+    ast.BitXor: "pythonic::operator_::xor_({0}, {1})".format,
+    ast.BitAnd: "pythonic::operator_::and_({0}, {1})".format,
+    ast.MatMult: "pythonic::operator_::functor::matmul()({0}, {1})".format,
+    ast.FloorDiv: "pythonic::operator_::functor::floordiv()({0}, {1})".format,
     # unaryop
-    ast.Invert: "(~{0})".format,
-    ast.Not: "(! {0})".format,
-    ast.UAdd: "(+{0})".format,
-    ast.USub: "(-{0})".format,
+    ast.Invert: "pythonic::operator_::invert({0})".format,
+    ast.Not: "pythonic::operator_::not_({0})".format,
+    ast.UAdd: "pythonic::operator_::pos({0})".format,
+    ast.USub: "pythonic::operator_::neg({0})".format,
     # cmpop
-    ast.Eq: "(pythonic::operator_::eq({0}, {1}))".format,
-    ast.NotEq: "(pythonic::operator_::ne({0}, {1}))".format,
-    ast.Lt: "(pythonic::operator_::lt({0}, {1}))".format,
-    ast.LtE: "(pythonic::operator_::le({0}, {1}))".format,
-    ast.Gt: "(pythonic::operator_::gt({0}, {1}))".format,
-    ast.GtE: "(pythonic::operator_::ge({0}, {1}))".format,
-    ast.Is: ("(pythonic::builtins::id({0}) == "
-             "pythonic::builtins::id({1}))").format,
-    ast.IsNot: ("(pythonic::builtins::id({0}) != "
-                "pythonic::builtins::id({1}))").format,
-    ast.In: "(pythonic::in({1}, {0}))".format,
-    ast.NotIn: "(! pythonic::in({1}, {0}))".format,
+    ast.Eq: "pythonic::operator_::eq({0}, {1})".format,
+    ast.NotEq: "pythonic::operator_::ne({0}, {1})".format,
+    ast.Lt: "pythonic::operator_::lt({0}, {1})".format,
+    ast.LtE: "pythonic::operator_::le({0}, {1})".format,
+    ast.Gt: "pythonic::operator_::gt({0}, {1})".format,
+    ast.GtE: "pythonic::operator_::ge({0}, {1})".format,
+    ast.Is: "pythonic::operator_::is_({0}, {1})".format,
+    ast.IsNot: ("pythonic::operator_::is_not({0}, {1})").format,
+    ast.In: "pythonic::operator_::contains({1}, {0})".format,
+    ast.NotIn: "(!pythonic::operator_::contains({1}, {0}))".format,
 }
 
 update_operator_to_lambda = {
@@ -162,6 +159,8 @@ def update_effects(self, node):
 
 
 BINARY_UFUNC = {"accumulate": FunctionIntr()}
+REDUCED_BINARY_UFUNC = {"accumulate": FunctionIntr(),
+                        "reduce": ConstFunctionIntr()}
 
 CLASSES = {
     "dtype": {
@@ -2876,7 +2875,7 @@ MODULES = {
         "abs": ConstFunctionIntr(signature=_numpy_unary_op_signature),
         "absolute": ConstFunctionIntr(signature=_numpy_ones_signature),
         "add": UFunc(
-            BINARY_UFUNC,
+            REDUCED_BINARY_UFUNC,
             signature=_numpy_binary_op_signature,
         ),
         "alen": ConstFunctionIntr(
@@ -3346,18 +3345,18 @@ MODULES = {
             ],
         ),
         "bitwise_and": UFunc(
-            BINARY_UFUNC,
+            REDUCED_BINARY_UFUNC,
             signature=_numpy_int_binary_op_signature
         ),
         "bitwise_not": ConstFunctionIntr(
             signature=_numpy_int_unary_op_signature
         ),
         "bitwise_or": UFunc(
-            BINARY_UFUNC,
+            REDUCED_BINARY_UFUNC,
             signature=_numpy_int_binary_op_signature
         ),
         "bitwise_xor": UFunc(
-            BINARY_UFUNC,
+            REDUCED_BINARY_UFUNC,
             signature=_numpy_int_binary_op_signature
         ),
         "bool": ConstFunctionIntr(signature=_bool_signature),
@@ -3705,8 +3704,8 @@ MODULES = {
         "float": ConstFunctionIntr(signature=_float_signature),
         "floor": ConstFunctionIntr(signature=_numpy_float_unary_op_signature),
         "floor_divide": UFunc(BINARY_UFUNC),
-        "fmax": UFunc(BINARY_UFUNC),
-        "fmin": UFunc(BINARY_UFUNC),
+        "fmax": UFunc(REDUCED_BINARY_UFUNC),
+        "fmin": UFunc(REDUCED_BINARY_UFUNC),
         "fmod": UFunc(BINARY_UFUNC),
         "frexp": ConstFunctionIntr(),
         "fromfunction": ConstFunctionIntr(),
@@ -3797,7 +3796,7 @@ MODULES = {
         "longlong": ConstFunctionIntr(signature=_int_signature),
         "max": ConstMethodIntr(signature=_numpy_unary_op_axis_signature),
         "maximum": UFunc(
-            BINARY_UFUNC,
+            REDUCED_BINARY_UFUNC,
             signature=_numpy_binary_op_signature
         ),
         "mean": ConstMethodIntr(),
@@ -3806,12 +3805,12 @@ MODULES = {
         ),
         "min": ConstMethodIntr(signature=_numpy_unary_op_axis_signature),
         "minimum": UFunc(
-            BINARY_UFUNC,
+            REDUCED_BINARY_UFUNC,
             signature=_numpy_binary_op_signature
         ),
         "mod": UFunc(BINARY_UFUNC),
         "multiply": UFunc(
-            BINARY_UFUNC,
+            REDUCED_BINARY_UFUNC,
             signature=_numpy_binary_op_signature,
         ),
         "nan": ConstantIntr(),
@@ -3930,6 +3929,9 @@ MODULES = {
                                            global_effects=True),
             "standard_normal": FunctionIntr(args=('size',),
                                             global_effects=True),
+            "uniform": FunctionIntr(args=('low', 'high', 'size',),
+                                    defaults=(0.0, 1.0, None,),
+                                    global_effects=True),
             "weibull": FunctionIntr(args=('a', 'size',),
                                     global_effects=True),
         },

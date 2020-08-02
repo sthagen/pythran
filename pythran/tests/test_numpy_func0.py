@@ -246,6 +246,21 @@ def np_rosen_der(x):
     def test_median1(self):
         self.run_test("def np_median1(a): from numpy import median ; return median(a)", numpy.array([1, 2, 3, 4,5]), np_median1=[NDArray[int,:]])
 
+    def test_median2(self):
+        self.run_test("def np_median2(a): from numpy import median ; return median(a, None)", numpy.array([1, 2, 3, 4,5]), np_median2=[NDArray[int,:]])
+
+    def test_median3(self):
+        self.run_test("def np_median3(a): from numpy import median ; return median(a, 0)", numpy.array([[1, 2, 3], [4,5,6]]), np_median3=[NDArray[int,:,:]])
+
+    def test_median4(self):
+        self.run_test("def np_median4(a): from numpy import median ; return median(a, 1)", numpy.array([[1, 2, 3], [4,5,6]]), np_median4=[NDArray[int,:,:]])
+
+    def test_median5(self):
+        self.run_test("def np_median5(a): from numpy import median ; return median(a, -1)", numpy.array([[[1], [2], [3]], [[4],[5],[6]]]), np_median5=[NDArray[int,:,:,:]])
+
+    def test_median6(self):
+        self.run_test("def np_median6(l): from numpy import median ; return l + median(l)", numpy.array([3, 1]), np_median6=[NDArray[int, :]])
+
     def test_mean0(self):
         self.run_test("def np_mean0(a): from numpy import mean ; return mean(a)", numpy.array([[1, 2], [3, 4]]), np_mean0=[NDArray[int,:,:]])
 
@@ -282,6 +297,18 @@ def np_rosen_der(x):
     def test_var5(self):
         self.run_test("def np_var5(a): from numpy import var ; return var(a, 2)", numpy.array([[[1, 2], [3, 4.]]]), np_var5=[NDArray[float,:,:,:]])
 
+    def test_var6(self):
+        self.run_test("def np_var6(a): from numpy import var ; return var(1j * a)", numpy.array([[[1, 2], [3, 4.]]]), np_var6=[NDArray[float,:,:,:]])
+
+    def test_var7(self):
+        self.run_test("def np_var7(a): from numpy import var ; return var(1j * a, 2)", numpy.array([[[1, 2], [3, 4.]]]), np_var7=[NDArray[float,:,:,:]])
+
+    def test_var8(self):
+        self.run_test("def np_var8(a): from numpy import var ; return var(1j * a, 2)", numpy.array([[[1, 2], [3, 4]]]), np_var8=[NDArray[int,:,:,:]])
+
+    def test_var9(self):
+        self.run_test("def np_var9(a): from numpy import var ; return var(1j * a)", numpy.array([[[1, 2], [3, 4]]]), np_var9=[NDArray[int,:,:,:]])
+
     def test_std0(self):
         self.run_test("def np_std0(a): from numpy import std ; return std(a)", numpy.array([[[1, 2], [3, 4]]]), np_std0=[NDArray[int, :, :, :]])
 
@@ -290,6 +317,9 @@ def np_rosen_der(x):
 
     def test_std2(self):
         self.run_test("def np_std2(a): from numpy import std ; return std(a, 1)", numpy.array([[[1, 2], [3, 4]]]), np_std2=[NDArray[int, :, :, :]])
+
+    def test_std3(self):
+        self.run_test("def np_std3(a): from numpy import std ; return std(1j*a, 1)", numpy.array([[[1, 2], [3, 4]]]), np_std3=[NDArray[int, :, :, :]])
 
     def test_logspace0(self):
         self.run_test("def np_logspace0(start, stop): from numpy import logspace ; start, stop = 3., 4. ; return logspace(start, stop, 4)", 3., 4., np_logspace0=[float, float])
@@ -651,6 +681,15 @@ def np_rosen_der(x):
 
     def test_sort7(self):
         self.run_test("def np_sort7(a): from numpy import sort ; return sort(a, 2, kind='mergesort')", numpy.arange(2*3*7, 0, -1).reshape(2,3,7), np_sort7=[NDArray[int, :, :, :]])
+
+    def test_sort8(self):
+        self.run_test("def np_sort8(a): from numpy import sort ; return sort(a, None)", numpy.arange(2*3*7, 0, -1).reshape(2,3,7), np_sort8=[NDArray[int, :, :, :]])
+
+    def test_sort9(self):
+        self.run_test("def np_sort9(a): from numpy import sort ; return sort(2 * a, None)", numpy.arange(2*3*7, 0, -1).reshape(2,3,7), np_sort9=[NDArray[int, :, :, :]])
+
+    def test_sort10(self):
+        self.run_test("def np_sort10(a): from numpy import sort ; return sort(3*a, 0)", numpy.arange(2*3*4, 0, -1).reshape(2,3,4), np_sort10=[NDArray[int, :, :, :]])
 
     def test_sort_complex0(self):
         self.run_test("def np_sort_complex0(a): from numpy import sort_complex ; return sort_complex(a)", numpy.array([[1,6],[7,5]]), np_sort_complex0=[NDArray[int,:,:]])

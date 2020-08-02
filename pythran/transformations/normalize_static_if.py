@@ -133,17 +133,13 @@ class NormalizeStaticIf(Transformation):
 
     def escaping_ids(self, scope_stmt, stmts):
         'gather sets of identifiers defined in stmts and used out of it'
-        assigned_ids = self.gather(IsAssigned, self.make_fake(stmts))
+        assigned_nodes = self.gather(IsAssigned, self.make_fake(stmts))
         escaping = set()
-        for stmt in stmts:
-            for head in self.def_use_chains.locals[self.funcs[-1]]:
-                # FIXME: this also considers names defined outside scope_stmt
-                # in order to include augassign
-                if head.name() not in assigned_ids:
-                    continue
-                for user in head.users():
-                    if scope_stmt not in self.ancestors[user.node]:
-                        escaping.add(head.name())
+        for assigned_node in assigned_nodes:
+            head = self.def_use_chains.chains[assigned_node]
+            for user in head.users():
+                if scope_stmt not in self.ancestors[user.node]:
+                    escaping.add(head.name())
         return escaping
 
     @staticmethod
@@ -368,13 +364,13 @@ class SplitStaticExpression(Transformation):
         has_static_expr = self.gather(HasStaticExpression, node.test)
 
         if not has_static_expr:
-            return node
+            return self.generic_visit(node)
 
         if node.test in self.static_expressions:
-            return node
+            return self.generic_visit(node)
 
         if not isinstance(node.test, ast.BinOp):
-            return node
+            return self.generic_visit(node)
 
         before, static = [], []
         values = [node.test.right, node.test.left]
@@ -458,6 +454,6 @@ class SplitStaticExpression(Transformation):
                                      node)
 
         self.update = True
-        return self.visit(node)
+        return self.generic_visit(node)
 
     visit_If = visit_IfExp = visit_Cond

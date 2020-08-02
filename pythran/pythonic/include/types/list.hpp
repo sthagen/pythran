@@ -104,11 +104,11 @@ namespace types
         !std::is_same<contiguous_normalized_slice, S>::value;
 
     using shape_t = types::array<long, value>;
-    shape_t shape() const
+    template <size_t I>
+    auto shape() const
+        -> decltype(details::extract_shape(*this, utils::int_<I>{}))
     {
-      shape_t res;
-      details::init_shape(res, *this, utils::int_<value>{});
-      return res;
+      return details::extract_shape(*this, utils::int_<I>{});
     }
 
     // constructor
@@ -146,6 +146,16 @@ namespace types
     sliced_list<T, decltype(std::declval<S>() * std::declval<slice>())>
     operator[](slice s) const;
 
+    template <class... Indices>
+    dtype load(long index0, long index1, Indices... indices) const
+    {
+      return fast(index0).load(index1, indices...);
+    }
+
+    dtype load(long index) const
+    {
+      return fast(index);
+    }
     // comparison
     template <class K>
     bool operator==(list<K> const &other) const;
@@ -166,6 +176,9 @@ namespace types
     intptr_t id() const;
 
     long count(T const &x) const;
+    template <class Tp, class Sp>
+    friend std::ostream &operator<<(std::ostream &os,
+                                    sliced_list<Tp, Sp> const &v);
   };
 
   /* list */
@@ -298,6 +311,17 @@ namespace types
     sliced_list<T, contiguous_slice>
     operator[](contiguous_slice const &s) const;
 
+    template <class... Indices>
+    dtype load(long index0, long index1, Indices... indices) const
+    {
+      return fast(index0).load(index1, indices...);
+    }
+
+    dtype load(long index) const
+    {
+      return fast(index);
+    }
+
     // modifiers
     template <class Tp>
     void push_back(Tp &&x);
@@ -330,6 +354,7 @@ namespace types
 
     list<T> operator+(empty_list const &) const;
     list<T> operator*(long t) const;
+    list<T> const &operator*=(long t);
 
     template <class F>
     list<T> &operator+=(F const &s);
@@ -347,13 +372,37 @@ namespace types
 
     long count(T const &x) const;
     using shape_t = array<long, value>;
-    shape_t shape() const
+    template <size_t I>
+    long shape() const
     {
-      shape_t res;
-      details::init_shape(res, *this, utils::int_<value>{});
+      if (I == 0)
+        return size();
+      else
+        return details::extract_shape(*this, utils::int_<I>{});
+    }
+
+    template <class Tp, size_t N, class V>
+    operator array_base<Tp, N, V>() const
+    {
+      assert(size() == N && "consistent size");
+      array_base<Tp, N, V> res;
+      std::copy(begin(), end(), res.begin());
       return res;
     }
   };
+
+  template <class T, size_t N>
+  list<T> operator*(static_list<T, N> const &self, long t)
+  {
+    list<T> res(self);
+    res *= t;
+    return res;
+  }
+  template <class T, size_t N>
+  list<T> operator*(long t, static_list<T, N> const &self)
+  {
+    return self * t;
+  }
 
   template <class T0, size_t N, class T1>
   list<typename __combined<T0, T1>::type>
@@ -395,9 +444,10 @@ namespace types
     operator list<T>() const;
     static constexpr long size();
 
-    shape_t shape() const
+    template <size_t I>
+    std::integral_constant<long, 0> shape() const
     {
-      return {0};
+      return {};
     }
 
     char fast(long) const

@@ -499,6 +499,8 @@ class RangeValuesBase(ModuleAnalysis):
 
         if prev_result is not None:
             self.result[RangeValuesBase.ResultHolder] = prev_result
+        else:
+            del self.result[RangeValuesBase.ResultHolder]
 
 
 class RangeValuesSimple(RangeValuesBase):
@@ -838,8 +840,12 @@ class RangeValues(RangeValuesBase):
 
     def cfg_visit(self, node):
         successors = [node]
+        visited = set()
         while successors:
             successor = successors.pop()
+            if successor in visited:
+                continue
+            visited.add(successor)
             nexts = self.visit(successor)
             if nexts:
                 successors.extend((n for n in nexts if n is not CFG.NIL))
@@ -1038,7 +1044,7 @@ class RangeValues(RangeValuesBase):
 
         # if the test may be false, visit the tail
         if 0 in test_range:
-            for successor in self.cfg.successors(node):
+            for successor in list(self.cfg.successors(node)):
                 if successor is not node.body[0]:
                     self.cfg_visit(successor)
 
@@ -1177,7 +1183,7 @@ class RangeValues(RangeValuesBase):
 
         elif 0 in test_range:
             successors = self.cfg.successors(node)
-            for successor in successors:
+            for successor in list(successors):
                 # no else branch
                 if successor not in visited_successors:
                     self.result, prev_state = init_state.copy(), self.result

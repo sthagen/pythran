@@ -18,6 +18,12 @@ class TestTyping(TestEnv):
         with self.assertRaises(pythran.syntax.PythranSyntaxError):
             pythran.compile_pythrancode("dumbo", code, pyonly=True)
 
+    def test_module_invalid_sequence_mult(self):
+        code = 'def foo(x): return [x] * 3.'
+
+        with self.assertRaises(pythran.syntax.PythranSyntaxError):
+            pythran.compile_pythrancode("dumbo", code, pyonly=True)
+
     def test_immutable_default0(self):
         code = 'def immutable_default0(x=[1]): pass'
 
@@ -58,6 +64,10 @@ class TestTyping(TestEnv):
 
     def test_immutable_default7(self):
         code = 'def g(): pass\ndef immutable_default7(x=g): pass'
+        pythran.compile_pythrancode("dumbo", code, pyonly=True)
+
+    def test_immutable_default8(self):
+        code = 'def g(): pass\ndef immutable_default8(x=int): pass'
         pythran.compile_pythrancode("dumbo", code, pyonly=True)
 
     def test_list_of_set(self):
@@ -313,9 +323,25 @@ def s_perm(seq):
             new_items += [item + seq for i in range(1)]
         return new_items
 def recursive_interprocedural_typing1(c):
-    l = [1,2,c]
+    l = [1,2] * c
     return s_perm(l)'''
         self.run_test(code, 3, recursive_interprocedural_typing1=[int])
+
+    @unittest.skip("bad typing: recursion and specialized list type")
+    def test_recursive_interprocedural_typing2(self):
+        code = '''
+def s_perm(seq):
+    if not seq:
+        return [[]]
+    else:
+        new_items = []
+        for item in s_perm(seq[:-1]):
+            new_items += [item + seq for i in range(1)]
+        return new_items
+def recursive_interprocedural_typing2(c):
+    l = [1,2,c]
+    return s_perm(l)'''
+        self.run_test(code, 3, recursive_interprocedural_typing2=[int])
 
     def test_print_numpy_types(self):
         self.run_test('''

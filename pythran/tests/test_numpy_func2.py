@@ -412,6 +412,15 @@ def test_copy0(x):
     def test_base_repr4(self):
         self.run_test("def np_base_repr4(a): from numpy import base_repr ; return base_repr(a, 16)", 32, np_base_repr4=[int])
 
+    def test_base_repr5(self):
+        self.run_test("def np_base_repr5(a): from numpy import base_repr ; return base_repr(a)", -5, np_base_repr5=[int])
+
+    def test_base_repr6(self):
+        self.run_test("def np_base_repr6(a): from numpy import base_repr ; return base_repr(a)", 0, np_base_repr6=[int])
+
+    def test_base_repr7(self):
+        self.run_test("def np_base_repr7(a): from numpy import base_repr ; return base_repr(a,5)", 0, np_base_repr7=[int])
+
     def test_average0(self):
         self.run_test("def np_average0(a): from numpy import average ; return average(a)", numpy.arange(10), np_average0=[NDArray[int,:]])
 
@@ -477,6 +486,15 @@ def test_copy0(x):
 
     def test_asarray3(self):
         self.run_test("def np_asarray3(a):\n from numpy import asarray; b = asarray(a) ; return a is b", numpy.arange(3), np_asarray3=[NDArray[int,:]])
+
+    def test_asarray4(self):
+        self.run_test("def np_asarray4(a):\n from numpy import asarray\n return asarray(a[1:])", [(1,2),(3,4)], np_asarray4=[List[Tuple[int, int]]])
+
+    def test_asarray5(self):
+        self.run_test("def np_asarray5(a):\n from numpy import asarray\n return asarray(a)", 1, np_asarray5=[int])
+
+    def test_asarray6(self):
+        self.run_test("def np_asarray6(a):\n from numpy import asarray\n return asarray(a, dtype=int)", 1.5, np_asarray6=[float])
 
     def test_asfarray0(self):
         self.run_test("def np_asfarray0(a):\n from numpy import asfarray; b = asfarray(a) ; return a is b", numpy.arange(3.), np_asfarray0=[NDArray[float,:]])
@@ -887,6 +905,20 @@ def np_expand_dims3(a,axis):
         self.run_test(code, numpy.random.randn(10,20,30),2, np_expand_dims3=[NDArray[float,:,:,:],int])
         self.run_test(code, numpy.random.randn(10,20,30),3, np_expand_dims3=[NDArray[float,:,:,:],int])
         
+
+    def test_expand_dims4(self):
+        code = '''
+
+import numpy as np
+
+def test1(x):
+    y = np.expand_dims(x, -1)
+    return y
+
+def expand_dims4(x):
+    A = np.array([-1.11312199, -0.99629629])
+    return test1(x - A)'''
+        self.run_test(code, numpy.random.randn(4,3,2), expand_dims4=[NDArray[float,:,:,:]])
 
     def test_duplicate(self):
         """Check array forwarded twice doesn't double free. """

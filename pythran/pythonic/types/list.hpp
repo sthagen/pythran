@@ -84,18 +84,27 @@ namespace types
   typename sliced_list<T, S>::const_reference
   sliced_list<T, S>::fast(long i) const
   {
-    return (*data)[slicing.get(i)];
+    assert(0 <= i && i < size());
+    auto const index = slicing.get(i);
+    assert(0 <= index && index < data->size());
+    return (*data)[index];
   }
   template <class T, class S>
   typename sliced_list<T, S>::const_reference sliced_list<T, S>::
   operator[](long i) const
   {
-    return (*data)[slicing.get(i)];
+    assert(i < size());
+    auto const index = slicing.get(i);
+    assert(0 <= index && index < data->size());
+    return (*data)[index];
   }
   template <class T, class S>
   typename sliced_list<T, S>::reference sliced_list<T, S>::operator[](long i)
   {
-    return (*data)[slicing.get(i)];
+    assert(i < size());
+    auto const index = slicing.get(i);
+    assert(0 <= index && index < data->size());
+    return (*data)[index];
   }
   template <class T, class S>
   sliced_list<T, S> sliced_list<T, S>::operator[](contiguous_slice s) const
@@ -107,6 +116,21 @@ namespace types
       sliced_list<T, S>::operator[](slice s) const
   {
     return {data, slicing * s.normalize(this->size())};
+  }
+  // io
+  template <class Tp, class Sp>
+  std::ostream &operator<<(std::ostream &os, sliced_list<Tp, Sp> const &v)
+  {
+    os << '[';
+    auto iter = v.begin();
+    if (iter != v.end()) {
+      while (iter + 1 != v.end()) {
+        os << *iter << ", ";
+        ++iter;
+      }
+      os << *iter;
+    }
+    return os << ']';
   }
 
   // comparison
@@ -139,7 +163,7 @@ namespace types
       data->erase(data->begin() + slicing.lower, data->begin() + slicing.upper);
       data->insert(data->begin() + slicing.lower, seq.begin(), seq.end());
     } else
-      assert(!"! implemented yet");
+      assert(!"not implemented yet");
     return *this;
   }
   template <class T, class S>
@@ -481,11 +505,13 @@ namespace types
   {
     if (n < 0)
       n += data->size();
+    assert(0 <= n && n < data->size());
     return fast(n);
   }
   template <class T>
   typename list<T>::const_reference list<T>::fast(long n) const
   {
+    assert(n < data->size());
     return (*data)[n];
   }
   template <class T>
@@ -493,6 +519,7 @@ namespace types
   {
     if (n < 0)
       n += data->size();
+    assert(0 <= n && n < data->size());
     return fast(n);
   }
 
@@ -614,6 +641,22 @@ namespace types
         start = std::copy(this->begin(), this->end(), start);
       return r;
     }
+  }
+  template <class T>
+  list<T> const &list<T>::operator*=(long n)
+  {
+    if (size() == 1) {
+      resize(n);
+      std::fill(begin() + 1, end(), fast(0));
+    } else {
+      auto const initial_size = size();
+      resize(n * initial_size);
+      // FIXME: could use less calls to std::copy
+      auto tgt = begin() + initial_size;
+      for (long i = 1; i < n; ++i)
+        tgt = std::copy(begin(), begin() + initial_size, tgt);
+    }
+    return *this;
   }
 
   template <class T>

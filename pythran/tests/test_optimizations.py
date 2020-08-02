@@ -667,3 +667,44 @@ class TestAnalyses(TestEnv):
                 return data'''
         self.run_test(code, 'aa', 2, 'bb', '3', subscript_function_aliasing=[str, int, str, str])
 
+    def test_range_simplify_jl(self):
+        code = '''
+import numpy as np
+silent = 0
+
+def B(n):
+    TS = 10
+    outSig = []
+    while n:
+        outSamps = np.zeros((10, 2))
+        outSig.append(outSamps.copy())
+    outSamps = np.zeros((10, 2))
+    outSig.append(outSamps.copy())
+    return outSig, TS
+
+def range_simplify_jl(n):
+    outSignal, TS = B(n)
+    return (outSignal)'''
+        self.run_test(code, 0, range_simplify_jl=[int])
+
+    def test_range_simplify_subscript(self):
+        code = '''
+def LooperMaster___init__():
+    self_userUseTempo = 1
+    self = [self_userUseTempo]
+    return self
+
+def range_simplify_subscript(n):
+    ML = LooperMaster___init__()
+    ML[0] = n
+    return ML'''
+        self.run_test(code, 1, range_simplify_subscript=[int])
+
+    def test_insert_none0(self):
+        code = '''
+            def insert_none0(x):
+                for ii in range(len(x)):
+                    if x[ii]: return x[ii]
+                else:
+                    return 0'''
+        self.run_test(code, [], insert_none0=[List[int]])
