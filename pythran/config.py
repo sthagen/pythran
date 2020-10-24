@@ -95,7 +95,7 @@ def lint_cfg(cfgp, **paths):
             "exists:" if exists else "does not exist:",
             path
         ])
-        logger.info(msg) if exists else logger.warn(msg)
+        logger.info(msg) if exists else logger.warning(msg)
 
     for section in cfgp.sections():
         # Check if section in the current configuration exists in the
@@ -114,14 +114,15 @@ def lint_cfg(cfgp, **paths):
                     ).format(section)
                 )
             else:
-                logger.warn(
+                logger.warning(
                     (
                         "pythranrc section [{}] is valid but options {} "
                         "are incorrect!"
                     ).format(section, options.difference(options_ref))
                 )
         else:
-            logger.warn("pythranrc section [{}] is invalid!".format(section))
+            logger.warning("pythranrc section [{}] is invalid!"
+                           .format(section))
 
 
 def make_extension(python, **extra):
@@ -208,9 +209,9 @@ def make_extension(python, **extra):
                     os.path.join(openblas.library_dir, openblas.static_library)
                 )
             except ImportError:
-                logger.warn("Failed to find 'pythran-openblas' package. "
-                            "Please install it or change the compiler.blas "
-                            "setting. Defaulting to 'blas'")
+                logger.warning("Failed to find 'pythran-openblas' package. "
+                               "Please install it or change the compiler.blas "
+                               "setting. Defaulting to 'blas'")
                 user_blas = 'blas'
         elif user_blas == 'none':
             extension['define_macros'].append('PYTHRAN_BLAS_NONE')
@@ -262,6 +263,7 @@ def run():
     Dump on stdout the config flags required to compile pythran-generated code.
     '''
     import argparse
+    import distutils.ccompiler
     import distutils.sysconfig
     import pythran
     import numpy
@@ -313,6 +315,9 @@ def run():
         if args.compiler:
             output.append(cxx)
 
+    compiler_obj = distutils.ccompiler.new_compiler()
+    distutils.sysconfig.customize_compiler(compiler_obj)
+
     if args.cflags or args.verbose >= 2:
         def fmt_define(define):
             name, value = define
@@ -336,15 +341,15 @@ def run():
 
     if args.libs or args.verbose >= 2:
         ldflags = []
-        ldflags.extend(('-L' + include)
+        ldflags.extend((compiler_obj.library_dir_option(include))
                        for include in extension['library_dirs'])
-        ldflags.extend(('-l' + include)
+        ldflags.extend((compiler_obj.library_option(include))
                        for include in extension['libraries'])
 
         if args.python:
-            ldflags.append('-L' + distutils.sysconfig.get_config_var('LIBPL'))
+            ldflags.append(compiler_obj.library_dir_option(distutils.sysconfig.get_config_var('LIBPL')))
             ldflags.extend(distutils.sysconfig.get_config_var('LIBS').split())
-            ldflags.append('-lpython'
+            ldflags.append(compiler_obj.library_option('python')
                            + distutils.sysconfig.get_config_var('VERSION'))
 
         logger.info('LDFLAGS = '.rjust(10) + ' '.join(ldflags))

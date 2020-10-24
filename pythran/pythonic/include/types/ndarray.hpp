@@ -338,11 +338,13 @@ namespace types
     template <class Expr>
     ndarray &operator^=(Expr const &expr);
 
-    template <class... Indices>
-    void store(dtype elt, Indices... indices)
+    template <class E, class... Indices>
+    void store(E elt, Indices... indices)
     {
+      static_assert(is_dtype<E>::value, "valid store");
       *(buffer + noffset<std::tuple_size<pS>::value>{}(
-                     *this, array<long, value>{{indices...}})) = elt;
+                     *this, array<long, value>{{indices...}})) =
+          static_cast<E>(elt);
     }
     template <class... Indices>
     dtype load(Indices... indices) const
@@ -351,12 +353,13 @@ namespace types
                             *this, array<long, value>{{indices...}}));
     }
 
-    template <class Op, class... Indices>
-    void update(dtype elt, Indices... indices) const
+    template <class Op, class E, class... Indices>
+    void update(E elt, Indices... indices) const
     {
+      static_assert(is_dtype<E>::value, "valid store");
       Op{}(*(buffer + noffset<std::tuple_size<pS>::value>{}(
                           *this, array<long, value>{{indices...}})),
-           elt);
+           static_cast<E>(elt));
     }
 
     /* element indexing
@@ -421,12 +424,16 @@ namespace types
     ndarray<T, sutils::push_front_t<pS, std::integral_constant<long, 1>>>
     operator[](none_type) const;
 
-    numpy_gexpr<ndarray const &, normalized_slice>
-    operator[](slice const &s) const &;
-    numpy_gexpr<ndarray, normalized_slice> operator[](slice const &s) && ;
+    template <class S>
+    typename std::enable_if<is_slice<S>::value,
+                            numpy_gexpr<ndarray const &, normalize_t<S>>>::type
+    operator[](S const &s) const &;
 
-    numpy_gexpr<ndarray const &, contiguous_normalized_slice>
-    operator[](contiguous_slice const &s) const;
+    template <class S>
+        typename std::enable_if<is_slice<S>::value,
+                                numpy_gexpr<ndarray, normalize_t<S>>>::type
+        operator[](S const &s) &&
+        ;
 
     long size() const;
 

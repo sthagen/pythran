@@ -71,8 +71,9 @@ namespace types
     // accessor
     str operator[](long i) const;
     str fast(long i) const;
-    sliced_str<slice> operator[](slice const &s) const;
-    sliced_str<contiguous_slice> operator[](contiguous_slice const &s) const;
+    template <class Sp>
+    typename std::enable_if<is_slice<Sp>::value, sliced_str<Sp>>::type
+    operator[](Sp const &s) const;
 
     // conversion
     operator long() const;
@@ -133,20 +134,17 @@ namespace types
 
     types::str &operator+=(types::str const &s);
 
-    container_type &get_data();
-    container_type const &get_data() const;
-
     long size() const;
     iterator begin() const;
     reverse_iterator rbegin() const;
     iterator end() const;
     reverse_iterator rend() const;
     auto c_str() const -> decltype(data->c_str());
-    std::string &chars()
+    container_type &chars()
     {
       return *data;
     }
-    std::string const &chars() const
+    container_type const &chars() const
     {
       return *data;
     }
@@ -174,14 +172,16 @@ namespace types
     template <class S>
     bool operator==(sliced_str<S> const &other) const;
 
-    sliced_str<slice> operator()(slice const &s) const;
-    sliced_str<contiguous_slice> operator()(contiguous_slice const &s) const;
+    template <class S>
+    typename std::enable_if<is_slice<S>::value, sliced_str<S>>::type
+    operator()(S const &s) const;
 
     str operator[](long i) const;
     str fast(long i) const;
 
-    sliced_str<slice> operator[](slice const &s) const;
-    sliced_str<contiguous_slice> operator[](contiguous_slice const &s) const;
+    template <class S>
+    typename std::enable_if<is_slice<S>::value, sliced_str<S>>::type
+    operator[](S const &s) const;
 
     explicit operator bool() const;
     long count(types::str const &sub) const;
