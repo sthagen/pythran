@@ -692,6 +692,18 @@ def test_copy0(x):
     def test_ones_(self):
         self.run_test("def np_ones_(a): from numpy import ones; return ones(a)", (10, 5), np_ones_=[Tuple[int, int]])
 
+    def test_full_0(self):
+        self.run_test("def np_full_0(a): from numpy import full; return full(a, 1.5)", (10, 5), np_full_0=[Tuple[int, int]])
+
+    def test_full_1(self):
+        self.run_test("def np_full_1(a): from numpy import full; return full(a, 1.5, dtype=int)", (10, 5), np_full_1=[Tuple[int, int]])
+
+    def test_full_2(self):
+        self.run_test("def np_full_2(a): from numpy import full; return full(a, 1.5)", 10, np_full_2=[int])
+
+    def test_full_3(self):
+        self.run_test("def np_full_3(a): from numpy import full; return full(a, 1.5, dtype=int)", 10, np_full_3=[int])
+
     def test_flat_zeros_(self):
         self.run_test("def np_flat_zeros_(a): from numpy import zeros; return zeros(a)", 10, np_flat_zeros_=[int])
 
@@ -723,19 +735,19 @@ def test_copy0(x):
         self.run_test("def np_empty_uint_shape(a):\n from numpy import empty, uint8\n a = empty((uint8(a), uint8(a)))\n return a.strides, len(a)", 3, np_empty_uint_shape=[int])
 
     def test_empty_integral_shape(self):
-        self.run_test("def np_empty_uint_shape(n):\n from numpy import empty, uint8\n a = empty(5)\n return a.strides, len(a), n", 3, np_empty_integral_shape=[int])
+        self.run_test("def np_empty_integral_shape(n):\n from numpy import empty, uint8\n a = empty(5)\n return a.strides, len(a), n", 3, np_empty_integral_shape=[int])
 
     def test_ones_uint_shape(self):
         self.run_test("def np_ones_uint_shape(a):\n from numpy import ones, uint32\n a = ones((uint32(a), uint32(a)))\n return a.strides, len(a)", 3, np_ones_uint_shape=[int])
 
     def test_ones_integral_shape(self):
-        self.run_test("def np_ones_uint_shape(n):\n from numpy import ones, uint8\n a = ones(5)\n return a.strides, len(a), n", 3, np_ones_integral_shape=[int])
+        self.run_test("def np_ones_integral_shape(n):\n from numpy import ones, uint8\n a = ones(5)\n return a.strides, len(a), n", 3, np_ones_integral_shape=[int])
 
     def test_zeros_uint_shape(self):
         self.run_test("def np_zeros_uint_shape(a):\n from numpy import zeros, int32\n a = zeros((int32(a), int32(a)))\n return a.strides, len(a)", 3, np_zeros_uint_shape=[int])
 
     def test_zeros_integral_shape(self):
-        self.run_test("def np_zeros_uint_shape(n):\n from numpy import zeros, uint8\n a = zeros(5)\n return a.strides, len(a), n", 3, np_zeros_integral_shape=[int])
+        self.run_test("def np_zeros_integral_shape(n):\n from numpy import zeros, uint8\n a = zeros(5)\n return a.strides, len(a), n", 3, np_zeros_integral_shape=[int])
 
     def test_empty_kwargs(self):
         self.run_test("def np_empty_kwargs(a):\n from numpy import empty\n a = empty(a, dtype=int)\n return a.strides, len(a)", (3, 2), np_empty_kwargs=[Tuple[int, int]])
@@ -823,6 +835,12 @@ def test_copy0(x):
 
     def test_ones_like_(self):
         self.run_test("def np_ones_like_(a):\n from numpy import ones_like, array\n return ones_like(array(a))", [[i,j,k,l] for i in range(5) for j in range(4) for k in range(6) for l in range(8)], np_ones_like_=[List[List[int]]])
+
+    def test_full_like_0(self):
+        self.run_test("def np_full_like_0(a):\n from numpy import full_like, array\n return full_like(array(a), fill_value=12.5)", [[i,j,k,l] for i in range(5) for j in range(4) for k in range(6) for l in range(8)], np_full_like_0=[List[List[int]]])
+
+    def test_full_like_1(self):
+        self.run_test("def np_full_like_1(a):\n from numpy import full_like, array\n return full_like(array(a), fill_value=12.5, dtype=float)", [[i,j,k,l] for i in range(5) for j in range(4) for k in range(6) for l in range(8)], np_full_like_1=[List[List[int]]])
 
     def test_zeros_like_(self):
         self.run_test("def np_zeros_like_(a):\n from numpy import zeros_like, array\n return zeros_like(array(a))", [[i,j,k,l] for i in range(5) for j in range(4) for k in range(6) for l in range(8)], np_zeros_like_=[List[List[int]]])
