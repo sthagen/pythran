@@ -1,12 +1,14 @@
-#ifndef PYTHONIC_INCLUDE_NUMPY_FFT_RFFT_HPP
-#define PYTHONIC_INCLUDE_NUMPY_FFT_RFFT_HPP
+#ifndef PYTHONIC_INCLUDE_NUMPY_FFT_FFT_HPP
+#define PYTHONIC_INCLUDE_NUMPY_FFT_FFT_HPP
 
 #include "pythonic/include/utils/functor.hpp"
 #include "pythonic/include/types/ndarray.hpp"
 
+PYTHONIC_NS_BEGIN
+
 /**
-/* **Noteable difference to numpy.fft.rfft:**
-/* In contrast to numpy.fft.rfft this implementation preserves precision
+/* **Noteable difference to numpy.fft.fft:**
+/* In contrast to numpy.fft.fft this implementation preserves precision
 /* of floating point and complex inputs, i.e. complex<float> input yields
 /* complex<float> output. numpy.fft.fft always returns complex<double>, even for
 /* long double input. This follows the same reasoning as given by numpy compiled
@@ -17,63 +19,85 @@
 /* loss of precision.
 /**/
 
-PYTHONIC_NS_BEGIN
-
 namespace numpy
 {
   namespace fft
   {
 
     template <class T, class pS>
+    types::ndarray<typename std::enable_if<types::is_complex<T>::value, T>::type,
+            types::array<long, std::tuple_size<pS>::value>>
+    fft(types::ndarray<T, pS> const &a, long n = -1, long axis = -1,
+          types::str const &norm = {});
+
+    template <class T, class pS>
+    types::ndarray<typename std::enable_if<types::is_complex<T>::value, T>::type,
+            types::array<long, std::tuple_size<pS>::value>>
+    fft(types::ndarray<T, pS> const &a, types::none_type n, long axis,
+          types::str const &norm );
+
+    template <class T, class pS>
+    types::ndarray<typename std::enable_if<types::is_complex<T>::value, T>::type,
+            types::array<long, std::tuple_size<pS>::value>>
+    fft(types::ndarray<T, pS> const &a, long n, long axis,
+          types::none_type norm );
+
+    template <class T, class pS>
+    types::ndarray<typename std::enable_if<types::is_complex<T>::value, T>::type,
+            types::array<long, std::tuple_size<pS>::value>>
+    fft(types::ndarray<T, pS> const &a, types::none_type n , long axis =-1,
+          types::none_type norm = types::none_type{});
+
+    template <class T, class pS>
     types::ndarray<typename std::enable_if<std::is_floating_point<T>::value, std::complex<T>>::type,
             types::array<long, std::tuple_size<pS>::value>>
-    rfft(types::ndarray<T, pS> const &a, long n = -1, long axis = -1,
+    fft(types::ndarray<T, pS> const &a, long n = -1, long axis = -1,
           types::str const &norm = {});
 
     template <class T, class pS>
     types::ndarray<typename std::enable_if<std::is_floating_point<T>::value, std::complex<T>>::type,
             types::array<long, std::tuple_size<pS>::value>>
-    rfft(types::ndarray<T, pS> const &a, types::none_type n, long axis,
+    fft(types::ndarray<T, pS> const &a, types::none_type n, long axis,
           types::str const &norm );
 
     template <class T, class pS>
     types::ndarray<typename std::enable_if<std::is_floating_point<T>::value, std::complex<T>>::type,
             types::array<long, std::tuple_size<pS>::value>>
-    rfft(types::ndarray<T, pS> const &a, long n, long axis,
+    fft(types::ndarray<T, pS> const &a, long n, long axis,
           types::none_type norm );
 
     template <class T, class pS>
     types::ndarray<typename std::enable_if<std::is_floating_point<T>::value, std::complex<T>>::type,
             types::array<long, std::tuple_size<pS>::value>>
-    rfft(types::ndarray<T, pS> const &a, types::none_type n , long axis =-1,
+    fft(types::ndarray<T, pS> const &a, types::none_type n , long axis =-1,
           types::none_type norm = types::none_type{});
 
     template <class T, class pS>
     types::ndarray<typename std::enable_if<std::is_integral<T>::value, std::complex<double>>::type,
             types::array<long, std::tuple_size<pS>::value>>
-    rfft(types::ndarray<T, pS> const &a, long n = -1, long axis = -1,
+    fft(types::ndarray<T, pS> const &a, long n = -1, long axis = -1,
           types::str const &norm = {});
 
     template <class T, class pS>
     types::ndarray<typename std::enable_if<std::is_integral<T>::value, std::complex<double>>::type,
             types::array<long, std::tuple_size<pS>::value>>
-    rfft(types::ndarray<T, pS> const &a, types::none_type n, long axis,
+    fft(types::ndarray<T, pS> const &a, types::none_type n, long axis,
           types::str const &norm );
 
     template <class T, class pS>
     types::ndarray<typename std::enable_if<std::is_integral<T>::value, std::complex<double>>::type,
             types::array<long, std::tuple_size<pS>::value>>
-    rfft(types::ndarray<T, pS> const &a, long n, long axis,
+    fft(types::ndarray<T, pS> const &a, long n, long axis,
           types::none_type norm );
 
     template <class T, class pS>
     types::ndarray<typename std::enable_if<std::is_integral<T>::value, std::complex<double>>::type,
             types::array<long, std::tuple_size<pS>::value>>
-    rfft(types::ndarray<T, pS> const &a, types::none_type n , long axis =-1,
+    fft(types::ndarray<T, pS> const &a, types::none_type n , long axis =-1,
           types::none_type norm = types::none_type{});
 
-    NUMPY_EXPR_TO_NDARRAY0_DECL(rfft);
-    DEFINE_FUNCTOR(pythonic::numpy::fft, rfft);
+    NUMPY_EXPR_TO_NDARRAY0_DECL(fft);
+    DEFINE_FUNCTOR(pythonic::numpy::fft, fft);
   }
 }
 PYTHONIC_NS_END

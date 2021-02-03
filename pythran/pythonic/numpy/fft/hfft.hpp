@@ -1,7 +1,7 @@
-#ifndef PYTHONIC_NUMPY_FFT_IRFFT_HPP
-#define PYTHONIC_NUMPY_FFT_IRFFT_HPP
+#ifndef PYTHONIC_NUMPY_FFT_HFFT_HPP
+#define PYTHONIC_NUMPY_FFT_HFFT_HPP
 
-#include "pythonic/include/numpy/fft/irfft.hpp"
+#include "pythonic/include/numpy/fft/hfft.hpp"
 #include "pythonic/utils/functor.hpp"
 #include "pythonic/include/utils/array_helper.hpp"
 #include "pythonic/types/ndarray.hpp"
@@ -18,84 +18,84 @@ namespace numpy
     template <class T , class pS>
     types::ndarray<T,
             types::array<long, std::tuple_size<pS>::value>>
-    irfft(types::ndarray<std::complex<T>, pS> const &in_array, types::none_type n, long axis,
+    hfft(types::ndarray<std::complex<T>, pS> const &in_array, types::none_type n, long axis,
           types::str const &norm)
     {
-        return c2r(in_array, -1, axis, norm, false);
+        return c2r(in_array, -1, axis, norm, true);
     }
 
     template <class T , class pS>
     types::ndarray<T,
             types::array<long, std::tuple_size<pS>::value>>
-    irfft(types::ndarray<std::complex<T>, pS> const &in_array, types::none_type n, long axis,
+    hfft(types::ndarray<std::complex<T>, pS> const &in_array, types::none_type n, long axis,
           types::none_type norm)
     {
-        return c2r(in_array, -1, axis, "", false);
+        return c2r(in_array, -1, axis, "", true);
     }
 
     template <class T , class pS>
     types::ndarray<T,
             types::array<long, std::tuple_size<pS>::value>>
-    irfft(types::ndarray<std::complex<T>, pS> const &in_array, long n, long axis,
+    hfft(types::ndarray<std::complex<T>, pS> const &in_array, long n, long axis,
           types::none_type norm)
     {
-        return c2r(in_array, n, axis, "", false);
+        return c2r(in_array, n, axis, "", true);
     }
 
     template <class T , class pS>
     types::ndarray<T,
             types::array<long, std::tuple_size<pS>::value>>
-    irfft(types::ndarray<std::complex<T>, pS> const &in_array, long n, long axis,
+    hfft(types::ndarray<std::complex<T>, pS> const &in_array, long n, long axis,
           types::str const &norm)
     {
-        return c2r(in_array, n, axis, norm, false);
+        return c2r(in_array, n, axis, norm, true);
     }
 
     template <class T , class pS>
     types::ndarray<typename std::enable_if<!types::is_complex<T>::value,
             typename std::conditional<std::is_integral<T>::value, double, T>::type>::type,
             types::array<long, std::tuple_size<pS>::value>>
-    irfft(types::ndarray<T, pS> const &in_array, types::none_type n, long axis,
+    hfft(types::ndarray<T, pS> const &in_array, types::none_type n, long axis,
           types::str const &norm)
     {
         auto tmp_array = _copy_to_complex(in_array);
-        return c2r(tmp_array, -1, axis, norm, false);
+        return c2r(tmp_array, -1, axis, norm, true);
     }
 
     template <class T , class pS>
     types::ndarray<typename std::enable_if<!types::is_complex<T>::value,
             typename std::conditional<std::is_integral<T>::value, double, T>::type>::type,
             types::array<long, std::tuple_size<pS>::value>>
-    irfft(types::ndarray<T, pS> const &in_array, types::none_type n, long axis,
+    hfft(types::ndarray<T, pS> const &in_array, types::none_type n, long axis,
           types::none_type norm)
     {
         auto tmp_array = _copy_to_complex(in_array);
-        return c2r(tmp_array, -1, axis, "", false);
+        return c2r(tmp_array, -1, axis, "", true);
     }
 
     template <class T , class pS>
     types::ndarray<typename std::enable_if<!types::is_complex<T>::value,
             typename std::conditional<std::is_integral<T>::value, double, T>::type>::type,
             types::array<long, std::tuple_size<pS>::value>>
-    irfft(types::ndarray<T, pS> const &in_array, long n, long axis,
+    hfft(types::ndarray<T, pS> const &in_array, long n, long axis,
           types::none_type norm)
     {
         auto tmp_array = _copy_to_complex(in_array);
-        return c2r(tmp_array, n, axis, "", false);
+        return c2r(tmp_array, n, axis, "", true);
     }
 
     template <class T , class pS>
     types::ndarray<typename std::enable_if<!types::is_complex<T>::value,
             typename std::conditional<std::is_integral<T>::value, double, T>::type>::type,
             types::array<long, std::tuple_size<pS>::value>>
-    irfft(types::ndarray<T, pS> const &in_array, long n, long axis,
+    hfft(types::ndarray<T, pS> const &in_array, long n, long axis,
           types::str const &norm)
     {
         auto tmp_array = _copy_to_complex(in_array);
-        return c2r(tmp_array, n, axis, norm, false);
+        return c2r(tmp_array, n, axis, norm, true);
     }
 
-    NUMPY_EXPR_TO_NDARRAY0_IMPL(irfft);
+    NUMPY_EXPR_TO_NDARRAY0_IMPL(hfft);
   }
 }
 PYTHONIC_NS_END
