@@ -17,20 +17,6 @@ def get_paths_cfg(
         platform_file='pythran-{}.cfg'.format(sys.platform),
         user_file='.pythranrc'
 ):
-    """
-    >>> os.environ['HOME'] = '/tmp/test'
-    >>> get_paths_cfg()['user']
-    '/tmp/test/.pythranrc'
-    >>> os.environ['HOME'] = '/tmp/test'
-    >>> os.environ['XDG_CONFIG_HOME'] = '/tmp/test2'
-    >>> get_paths_cfg()['user']
-    '/tmp/test2/.pythranrc'
-    >>> os.environ['HOME'] = '/tmp/test'
-    >>> os.environ['XDG_CONFIG_HOME'] = '/tmp/test2'
-    >>> os.environ['PYTHRANRC'] = '/tmp/test3/pythranrc'
-    >>> get_paths_cfg()['user']
-    '/tmp/test3/pythranrc'
-    """
     sys_config_dir = os.path.dirname(__file__)
     sys_config_path = os.path.join(sys_config_dir, sys_file)
 
@@ -38,7 +24,11 @@ def get_paths_cfg(
 
     user_config_path = os.environ.get('PYTHRANRC', None)
     if not user_config_path:
-        user_config_dir = os.environ.get('XDG_CONFIG_HOME', '~')
+        user_config_dir = os.environ.get('XDG_CONFIG_HOME', None)
+        if not user_config_dir:
+            user_config_dir = os.environ.get('HOME', None)
+        if not user_config_dir:
+            user_config_dir = '~'
         user_config_path = os.path.expanduser(
             os.path.join(user_config_dir, user_file))
     return {"sys": sys_config_path,
@@ -180,6 +170,11 @@ def make_extension(python, **extra):
     if cxx is not None:
         extension['cxx'] = cxx
         extension['cc'] = cc or cxx
+
+    # Honor CFLAGS
+    cflags = os.environ.get('CFLAGS', None)
+    if cflags is not None:
+        extension['extra_compile_args'].extend(cflags.split())
 
     for k, w in extra.items():
         extension[k].extend(w)
