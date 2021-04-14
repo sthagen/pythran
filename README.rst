@@ -8,7 +8,7 @@ What is it?
 
 Pythran is an ahead of time compiler for a subset of the Python language, with a
 focus on scientific computing. It takes a Python module annotated with a few
-interface description and turns it into a native Python module with the same
+interface descriptions and turns it into a native Python module with the same
 interface, but (hopefully) faster.
 
 It is meant to efficiently compile **scientific programs**, and takes advantage
@@ -24,7 +24,7 @@ Pythran sources are hosted on https://github.com/serge-sans-paille/pythran.
 
 Pythran releases are hosted on http://pypi.python.org/pypi/pythran.
 
-Pythran is available through Conda on https://anaconda.org/conda-forge/pythran.
+Pythran is available on conda-forge on https://anaconda.org/conda-forge/pythran.
 
 Debian/Ubuntu
 =============
@@ -43,12 +43,16 @@ Using ``pip``
 
         $> pip install pythran
 
-Using ``conda``
-***************
+Using ``mamba``` or ``conda``
+*****************************
 
-1. Install ``conda`` (if you don't have it installed yet) from https://github.com/conda-forge/miniforge
-
+1. Using ``mamba`` (https://github.com/conda-forge/miniforge#mambaforge) or ``conda`` (https://github.com/conda-forge/miniforge)
+ 
 2. Run::
+
+       $> mamba install -c conda-forge pythran
+
+   or::
 
        $> conda install -c conda-forge pythran
 
