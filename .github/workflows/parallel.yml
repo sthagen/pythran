@@ -25,11 +25,15 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         pip install ipython nbval pytest-xdist cython scipy wheel
+        # libgomp comes with gcc-5, for clang we need to install libomp
         sudo apt install libopenblas-dev ${{ matrix.cpp-version }}
+        if [[ ${{ matrix.cpp-version }} == 'clang-5.0' ]]; then
+          sudo apt install libomp5 libomp-dev;
+        fi
     - name: Setup
       run: |
         python setup.py install
-        printf '[commpiler]\nblas=openblas\n' > ~/.pythranrc
+        printf '[compiler]\nblas=openblas\n' > ~/.pythranrc
     - name: Testing vectorized
       run: |
         export CC=`echo ${{ matrix.cpp-version }} | sed -e 's/g++/gcc/'`
@@ -41,4 +45,5 @@ jobs:
         export CC=`echo ${{ matrix.cpp-version }} | sed -e 's/g++/gcc/'`
         export CXX=`echo ${{ matrix.cpp-version }} | sed -e 's/clang/clang++/'`
         export CXXFLAGS="-fopenmp"
+        export LDFLAGS="-fopenmp"
         pytest pythran/tests/test_cases.py -v --numprocesses=1
