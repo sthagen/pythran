@@ -145,6 +145,19 @@ _complex_signature = Union[
     Fun[[float, float], complex],
 ]
 
+# workaround changes in numpy interaction with getfullargspec
+try:
+    import numpy
+    getfullargspec(numpy.asarray)
+    # if we have a description, honor it
+    extra_numpy_asarray_descr = {}
+except TypeError:
+    extra_numpy_asarray_descr = {'args':('a', 'dtype'),
+                                 'defaults': (None,)}
+
+
+
+
 
 def update_effects(self, node):
     """
@@ -164,7 +177,7 @@ REDUCED_BINARY_UFUNC = {"accumulate": FunctionIntr(),
 
 CLASSES = {
     "dtype": {
-        "type": ConstMethodIntr(),
+        "type": MethodIntr(),
     },
     "list": {
         "append": MethodIntr(signature=Fun[[List[T0], T0], None]),
@@ -757,6 +770,10 @@ CLASSES = {
         ),
         "size": AttributeIntr(signature=Fun[[NDArray[T0, :]], int],
                               return_range=interval.positive_values),
+        "sort": MethodIntr(
+            args=("self", "axis", "kind"),
+            defaults=(-1, None)
+        ),
         "strides": AttributeIntr(
             signature=Union[
                 # bool
@@ -2811,6 +2828,9 @@ MODULES = {
     },
     "scipy": {
         "special": {
+            "binom": ConstFunctionIntr(
+                signature=_numpy_binary_op_float_signature
+            ),
             "gammaln": ConstFunctionIntr(
                 signature=_numpy_unary_op_float_signature
             ),
@@ -3170,7 +3190,8 @@ MODULES = {
             ]
         ),
         "array_str": ConstFunctionIntr(signature=_numpy_array_str_signature),
-        "asarray": ReadOnceFunctionIntr(signature=_numpy_array_signature),
+        "asarray": ReadOnceFunctionIntr(signature=_numpy_array_signature,
+                                        **extra_numpy_asarray_descr),
         "asarray_chkfinite": ConstFunctionIntr(
             signature=_numpy_array_signature),
         "ascontiguousarray": ConstFunctionIntr(
@@ -4466,6 +4487,7 @@ MODULES = {
         ),
         "pop": MethodIntr(),
         "remove": MethodIntr(),
+        "sort": MethodIntr(),
         "update": MethodIntr(update_effects),
     },
 }
@@ -4473,27 +4495,6 @@ MODULES = {
 if sys.version_info < (3, 5):
     del MODULES['operator']['matmul']
     del MODULES['operator']['__matmul__']
-
-# OMP version
-try:
-    import omp
-    omp_version = omp.VERSION
-except (ImportError, AttributeError):
-    omp_version = 45  # Fallback on last version
-
-if omp_version >= 30:
-    MODULES['omp'].update({
-        "set_schedule": FunctionIntr(global_effects=True),
-        "get_schedule": FunctionIntr(global_effects=True),
-        "get_thread_limit": FunctionIntr(global_effects=True),
-        "set_max_active_levels": FunctionIntr(global_effects=True),
-        "get_max_active_levels": FunctionIntr(global_effects=True),
-        "get_level": FunctionIntr(global_effects=True),
-        "get_ancestor_thread_num": FunctionIntr(global_effects=True),
-        "get_team_size": FunctionIntr(global_effects=True),
-        "get_active_level": FunctionIntr(global_effects=True),
-        "in_final": FunctionIntr(global_effects=True),
-    })
 
 # VMSError is only available on VMS
 if 'VMSError' in sys.modules['builtins'].__dict__:
@@ -4507,7 +4508,7 @@ if 'WindowsError' in sys.modules['builtins'].__dict__:
 for module_name in ["omp", "scipy.special", "scipy"]:
     try:
         __import__(module_name)
-    except ImportError:
+    except:
         logger.info(
             "Pythran support disabled for module: {}".format(module_name)
         )
@@ -4518,6 +4519,23 @@ for module_name in ["omp", "scipy.special", "scipy"]:
 for method in list(MODULES['numpy'].keys()):
     if method not in sys.modules['numpy'].__dict__:
         del MODULES['numpy'][method]
+
+# if openmp is available, check its version and populate the API accordingly
+if 'omp' in MODULES:
+    omp_version = getattr(__import__('omp'), 'VERSION', 45)
+    if omp_version >= 30:
+        MODULES['omp'].update({
+            "set_schedule": FunctionIntr(global_effects=True),
+            "get_schedule": FunctionIntr(global_effects=True),
+            "get_thread_limit": FunctionIntr(global_effects=True),
+            "set_max_active_levels": FunctionIntr(global_effects=True),
+            "get_max_active_levels": FunctionIntr(global_effects=True),
+            "get_level": FunctionIntr(global_effects=True),
+            "get_ancestor_thread_num": FunctionIntr(global_effects=True),
+            "get_team_size": FunctionIntr(global_effects=True),
+            "get_active_level": FunctionIntr(global_effects=True),
+            "in_final": FunctionIntr(global_effects=True),
+        })
 
 
 # populate argument description through introspection
@@ -4579,6 +4597,7 @@ fill_constants_types((), MODULES)
 # a method name to module binding
 # {method_name : ((full module path), signature)}
 methods = {}
+duplicated_methods = {}
 
 
 def save_method(elements, module_path):
@@ -4591,6 +4610,10 @@ def save_method(elements, module_path):
         elif signature.ismethod():
             # in case of duplicates, there must be a __dispatch__ record
             # and it is the only recorded one
+            if elem in MODULES['__dispatch__'] and module_path[0] != '__dispatch__':
+                duplicated_methods.setdefault(elem, []).append((module_path,
+                                                                signature))
+
             if elem in methods and module_path[0] != '__dispatch__':
                 assert elem in MODULES['__dispatch__']
                 path = ('__dispatch__',)

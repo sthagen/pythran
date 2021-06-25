@@ -447,7 +447,7 @@ namespace types
   long prod_helper(S const &shape, utils::index_sequence<Is...>)
   {
     long res = 1;
-    std::initializer_list<long> _ = {
+    (void)std::initializer_list<long>{
         (res *= (long)(shape.template shape<Is>()))...};
     return res;
   }
@@ -488,7 +488,7 @@ namespace types
   }
 
   template <class T>
-  typename T::dtype numpy_iexpr_helper<1>::get(T const &e, long i)
+  typename T::dtype &numpy_iexpr_helper<1>::get(T const &e, long i)
   {
     return e.buffer[i * e.template strides<T::value - 1>()];
   }

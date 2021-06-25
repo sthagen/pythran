@@ -776,25 +776,25 @@ struct __combined<pythonic::types::array_base<T, N, V>, container<K>> {
       pythonic::types::array_base<typename __combined<T, K>::type, N, V>;
 };
 
-template <class K, class V, class T, size_t N>
+template <class K, class V, class T, size_t N, class AV>
 struct __combined<indexable_container<K, V>,
-                  pythonic::types::array_base<T, N, V>> {
+                  pythonic::types::array_base<T, N, AV>> {
   using type =
-      pythonic::types::array_base<typename __combined<V, T>::type, N, V>;
+      pythonic::types::array_base<typename __combined<V, T>::type, N, AV>;
 };
 
-template <class K, class V, class T, size_t N>
-struct __combined<pythonic::types::array_base<T, N, V>,
+template <class K, class V, class T, size_t N, class AV>
+struct __combined<pythonic::types::array_base<T, N, AV>,
                   indexable_container<K, V>> {
   using type =
-      pythonic::types::array_base<typename __combined<T, V>::type, N, V>;
+      pythonic::types::array_base<typename __combined<T, V>::type, N, AV>;
 };
 
 template <class... t0, class... t1>
 struct __combined<std::tuple<t0...>, std::tuple<t1...>> {
-  using type = std::tuple<typename __combined<t0, t1>::type...>; // no further
-                                                                 // combination
+  using type = std::tuple<typename __combined<t0, t1>::type...>;
 };
+
 template <class t, class... t0>
 struct __combined<std::tuple<t0...>, container<t>> {
   using type = std::tuple<t0...>;
@@ -803,6 +803,26 @@ struct __combined<std::tuple<t0...>, container<t>> {
 template <class t, class... t0>
 struct __combined<container<t>, std::tuple<t0...>> {
   using type = std::tuple<t0...>;
+};
+
+template <long I, class t, class... t0>
+struct __combined<std::tuple<t0...>,
+                  indexable_container<std::integral_constant<long, I>, t>> {
+  using holder = std::tuple<t0...>;
+  template <size_t... Is>
+  static std::tuple<typename std::conditional<
+      I == Is, typename __combined<
+                   t, typename std::tuple_element<Is, holder>::type>::type,
+      typename std::tuple_element<Is, holder>::type>::type...>
+      make_type(pythonic::utils::index_sequence<Is...>);
+  static auto make_type() -> decltype(
+      make_type(pythonic::utils::make_index_sequence<sizeof...(t0)>()));
+  using type = decltype(make_type());
+};
+
+template <class k, class t, class... t0>
+struct __combined<indexable_container<k, t>, std::tuple<t0...>>
+    : __combined<std::tuple<t0...>, indexable_container<k, t>> {
 };
 
 template <class t, size_t n, class... types>
@@ -887,9 +907,8 @@ namespace std
   }
 
   template <class... Tys>
-  class tuple_size<pythonic::types::pshape<Tys...>>
-      : public std::integral_constant<std::size_t, sizeof...(Tys)>
-  {
+  struct tuple_size<pythonic::types::pshape<Tys...>>
+      : public std::integral_constant<std::size_t, sizeof...(Tys)> {
   };
 
   template <size_t I, class... Tys>
@@ -1031,13 +1050,13 @@ namespace sutils
   template <class T0, T0 N, class T1>
   void assign(std::integral_constant<T0, N> &t0, T1 t1)
   {
-    assert(t0 == t1 && "consistent");
+    assert((long)t0 == (long)t1 && "consistent");
   }
 
   template <size_t Start, ssize_t Offset, class T0, class T1, size_t... Is>
   void copy_shape(T0 &shape0, T1 const &shape1, utils::index_sequence<Is...>)
   {
-    std::initializer_list<int> _ = {
+    (void)std::initializer_list<int>{
         (assign(std::get<Start + Is>(shape0),
                 shape1.template shape<Is + Start + Offset>()),
          1)...};
@@ -1045,7 +1064,7 @@ namespace sutils
   template <size_t Start, ssize_t Offset, class T0, class T1, size_t... Is>
   void scopy_shape(T0 &shape0, T1 const &shape1, utils::index_sequence<Is...>)
   {
-    std::initializer_list<int> _ = {
+    (void)std::initializer_list<int>{
         (assign(std::get<Start + Is>(shape0),
                 std::get<Is + Start + Offset>(shape1)),
          1)...};
@@ -1054,7 +1073,7 @@ namespace sutils
   void copy_strides(T0 &stride0, T1 const &stride1,
                     utils::index_sequence<Is...>)
   {
-    std::initializer_list<int> _ = {
+    (void)std::initializer_list<int>{
         (assign(std::get<Start + Is>(stride0),
                 stride1.template strides<Is + Start + Offset>()),
          1)...};
@@ -1206,8 +1225,8 @@ namespace sutils
   long sfind(S &s, long v, std::integral_constant<size_t, I>, long start,
              bool comp(long, long))
   {
-    return comp(std::get<I>(s), v) && I < start
-               ? I
+    return comp(std::get<I>(s), v) && (long)I < start
+               ? (long)I
                : sfind(s, v, std::integral_constant<size_t, I - 1>(), start,
                        comp);
   }

@@ -43,8 +43,8 @@ Using ``pip``
 
         $> pip install pythran
 
-Using ``mamba``` or ``conda``
-*****************************
+Using ``mamba`` or ``conda``
+****************************
 
 1. Using ``mamba`` (https://github.com/conda-forge/miniforge#mambaforge) or ``conda`` (https://github.com/conda-forge/miniforge)
  
@@ -74,9 +74,9 @@ Depending on your setup, you may need to add the following to your ``~/.pythranr
 ArchLinux
 =========
 
-Using any working `AUR helper <https://wiki.archlinux.org/index.php/AUR_helpers>`_, say yay::
+Using ``pacman``::
 
-    $> yay -S python-pythran
+    $> pacman -S python-pythran
 
 
 Fedora

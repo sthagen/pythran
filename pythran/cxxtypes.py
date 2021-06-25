@@ -22,6 +22,12 @@ class ordered_set(object):
     def __iter__(self):
         return iter(self.values)
 
+    def __len__(self):
+        return len(self.values)
+
+    def __getitem__(self, index):
+        return self.values[index]
+
 
 class TypeBuilder(object):
     '''
@@ -181,6 +187,20 @@ std::declval<bool>()))
                     return builder.UnknownType
                 else:
                     return InstantiatedType(self.fun, self.name, arguments)
+
+        class LType(Type):
+            def __init__(self, base, node):
+                super(LType, self).__init__(node=node)
+                self.isrec = False
+                self.orig = base
+                self.final_type = base
+
+            def generate(self, ctx):
+                if self.isrec:
+                    return self.orig.generate(ctx)
+                else:
+                    self.isrec = True
+                    return self.final_type.generate(ctx)
 
         class InstantiatedType(Type):
             """
@@ -463,6 +483,25 @@ std::declval<bool>()))
 
             def generate(self, ctx):
                 return 'indexable<{0}>'.format(ctx(self.of))
+
+        class IndexableContainerType(Type):
+            '''
+            Type of any container of stuff of the same type,
+            indexable by another type
+            '''
+            def __init__(self, of_key, of_val):
+                super(IndexableContainerType, self).__init__(of_key=of_key,
+                                                             of_val=of_val)
+
+            def iscombined(self):
+                return any((of.iscombined()
+                            for of in (self.of_key, self.of_val)))
+
+            def generate(self, ctx):
+                return ('indexable_container<'
+                        '{0}, typename std::remove_reference<{1}>::type'
+                        '>'
+                        .format(ctx(self.of_key), ctx(self.of_val)))
 
         class ExpressionType(Type):
 

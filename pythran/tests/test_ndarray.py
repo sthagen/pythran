@@ -17,6 +17,12 @@ except AttributeError:
 @TestEnv.module
 class TestNdarray(TestEnv):
 
+    def test_ndarray_memory_error(self):
+        with self.assertRaises(MemoryError):
+            self.run_test('def ndarray_memory_error(n): import numpy as np; return np.ones(n)',
+                          999999999999,
+                          ndarray_memory_error=[int])
+
     def test_ndarray_intc(self):
         self.run_test('def ndarray_intc(a): import numpy as np; return np.intc(a), np.array([a, a], dtype=np.intc)',
                       numpy.intc(5),
@@ -424,6 +430,16 @@ def assign_ndarray(t):
 
     def test_iexpr2(self):
         self.run_test("def np_iexpr2(a,m): a[m==False] = 1; return a", numpy.arange(10).reshape(5,2), numpy.arange(10).reshape(5,2), np_iexpr2=[NDArray[int, :,:], NDArray[int, :,:]])
+
+    def test_iexpr3(self):
+        code = '''
+import numpy as np
+def np_iexpr3 (x, nbits):
+    out = np.zeros ((len(x), 1<<nbits), dtype=complex)
+    for e in range (len (x)):
+        out[e,x[e]] = 1
+    return out'''
+        self.run_test(code, numpy.arange(16, dtype=numpy.int16), 4, np_iexpr3=[NDArray[numpy.int16, :], int])
 
     def test_item0(self):
         self.run_test("def np_item0(a): return a.item(3)", numpy.array([[3, 1, 7],[2, 8, 3],[8, 5, 3]]), np_item0=[NDArray[int, :,: ]])
@@ -1103,8 +1119,6 @@ def complex_conversion0(x):
             5.,
             built_slice_indexing=[NDArray[float, :], int, int, float])
 
-    @unittest.skipIf(LooseVersion(numpy.__version__) >= '1.20',
-                     "numpy.dtype.type changed in 1.20.0")
     def test_dtype_type(self):
         self.run_test('''
             def dtype_type(x):

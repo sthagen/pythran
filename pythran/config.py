@@ -3,6 +3,7 @@ try:
     from configparser import ConfigParser
 except ImportError:
     from ConfigParser import SafeConfigParser as ConfigParser
+import io
 import logging
 import numpy.distutils.system_info as numpy_sys
 import numpy
@@ -10,6 +11,33 @@ import os
 import sys
 
 logger = logging.getLogger('pythran')
+
+
+def get_include():
+    # using / as separator as advised in the distutils doc
+    return (os.path.dirname(os.path.dirname(__file__)) or '.') + '/pythran'
+
+
+class silent(object):
+    '''
+    Silent sys.stderr at the system level
+    '''
+
+    def __enter__(self):
+        try:
+            self.prevfd = os.dup(sys.stderr.fileno())
+            os.close(sys.stderr.fileno())
+        except io.UnsupportedOperation:
+            self.prevfd = None
+
+        self.prevstream = sys.stderr
+        sys.stderr = open(os.devnull, 'r')
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        sys.stderr.close()
+        sys.stderr = self.prevstream
+        if self.prevfd:
+            os.dup2(self.prevfd, sys.stderr.fileno())
 
 
 def get_paths_cfg(
@@ -157,9 +185,9 @@ def make_extension(python, **extra):
     extension['define_macros'].append(
         '__PYTHRAN__={}'.format(sys.version_info.major))
 
-    here = os.path.dirname(os.path.dirname(__file__)) or '.'
-    # using / as separator as advised in the distutils doc
-    extension["include_dirs"].append(here + '/pythran')
+    pythonic_dir = get_include()
+
+    extension["include_dirs"].append(pythonic_dir)
 
     extra.pop('language', None)  # forced to c++ anyway
     cxx = extra.pop('cxx', None)
@@ -186,38 +214,35 @@ def make_extension(python, **extra):
         extension[k].extend(w)
     if cfg.getboolean('pythran', 'complex_hook'):
         # the patch is *not* portable
-        extension["include_dirs"].append(here + '/pythran/pythonic/patch')
+        extension["include_dirs"].append(pythonic_dir + '/pythonic/patch')
 
-    # Numpy can pollute stdout with warning message which should be on stderr
-    old_stdout = sys.stdout
-    try:
-        sys.stdout = sys.stderr
+    # numpy specific
+    if python:
+        extension['include_dirs'].append(numpy.get_include())
 
-        # numpy specific
-        if python:
-            extension['include_dirs'].append(numpy.get_include())
+    # blas dependency
+    reserved_blas_entries = 'pythran-openblas', 'none'
+    user_blas = cfg.get('compiler', 'blas')
+    if user_blas == 'pythran-openblas':
+        try:
+            import pythran_openblas as openblas
+            # required to cope with atlas missing extern "C"
+            extension['define_macros'].append('PYTHRAN_BLAS_OPENBLAS')
+            extension['include_dirs'].extend(openblas.include_dirs)
+            extension['extra_objects'].append(
+                os.path.join(openblas.library_dir, openblas.static_library)
+            )
+        except ImportError:
+            logger.warning("Failed to find 'pythran-openblas' package. "
+                           "Please install it or change the compiler.blas "
+                           "setting. Defaulting to 'blas'")
+            user_blas = 'blas'
+    elif user_blas == 'none':
+        extension['define_macros'].append('PYTHRAN_BLAS_NONE')
 
-        # blas dependency
-        reserved_blas_entries = 'pythran-openblas', 'none'
-        user_blas = cfg.get('compiler', 'blas')
-        if user_blas == 'pythran-openblas':
-            try:
-                import pythran_openblas as openblas
-                # required to cope with atlas missing extern "C"
-                extension['define_macros'].append('PYTHRAN_BLAS_OPENBLAS')
-                extension['include_dirs'].extend(openblas.include_dirs)
-                extension['extra_objects'].append(
-                    os.path.join(openblas.library_dir, openblas.static_library)
-                )
-            except ImportError:
-                logger.warning("Failed to find 'pythran-openblas' package. "
-                               "Please install it or change the compiler.blas "
-                               "setting. Defaulting to 'blas'")
-                user_blas = 'blas'
-        elif user_blas == 'none':
-            extension['define_macros'].append('PYTHRAN_BLAS_NONE')
-
-        if user_blas not in reserved_blas_entries:
+    if user_blas not in reserved_blas_entries:
+        # Numpy can pollute stdout with checks
+        with silent():
             numpy_blas = numpy_sys.get_info(user_blas)
             # required to cope with atlas missing extern "C"
             extension['define_macros'].append('PYTHRAN_BLAS_{}'
@@ -227,8 +252,7 @@ def make_extension(python, **extra):
                 numpy_blas.get('library_dirs', []))
             extension['include_dirs'].extend(
                 numpy_blas.get('include_dirs', []))
-    finally:
-        sys.stdout = old_stdout
+
 
     # final macro normalization
     extension["define_macros"] = [

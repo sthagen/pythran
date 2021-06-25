@@ -275,7 +275,10 @@ class AutoFor(Loop):
         self.iter = iter_
 
     def intro_line(self):
-        return "for (auto&& {0}: {1})".format(self.target, self.iter)
+        if self.target == '_':
+            return "for (PYTHRAN_UNUSED auto&& {0}: {1})".format(self.target, self.iter)
+        else:
+            return "for (auto&& {0}: {1})".format(self.target, self.iter)
 
 
 # simple statements -----------------------------------------------------------
@@ -508,6 +511,7 @@ class PythonModule(object):
             {wname}(PyObject *self, PyObject *args, PyObject *kw)
             {{
                 PyObject* args_obj[{size}+1];
+                {silent_warning}
                 char const* keywords[] = {{{keywords} nullptr}};
                 if(! PyArg_ParseTupleAndKeywords(args, kw, "{fmt}",
                                                  (char**)keywords {objs}))
@@ -521,6 +525,7 @@ class PythonModule(object):
 
         self.wrappers.append(
             wrapper.format(name=func.fdecl.name,
+                           silent_warning= '' if ctypes else '(void)args_obj;',
                            size=len(ctypes),
                            fmt="O" * len(ctypes),
                            objs=''.join(', &args_obj[%d]' % i
@@ -634,7 +639,9 @@ class PythonModule(object):
             PYTHRAN_MODULE_INIT({name})(void)
             #ifndef _WIN32
             __attribute__ ((visibility("default")))
+            #if defined(GNUC) && !defined(__clang__)
             __attribute__ ((externally_visible))
+            #endif
             #endif
             ;
             PyMODINIT_FUNC

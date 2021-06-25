@@ -21,6 +21,7 @@ import gast as ast
 import operator
 from functools import reduce
 from copy import deepcopy
+import types
 
 
 class UnboundableRValue(Exception):
@@ -52,6 +53,13 @@ class Types(ModuleAnalysis):
         ModuleAnalysis.__init__(self, Reorder, StrictAliases, LazynessAnalysis,
                                 Immediates, RangeValues)
         self.curr_locals_declaration = None
+
+    def combined(self, *types):
+        if len(types) == 1:
+            return next(iter(types))
+        return self.builder.CombinedTypes(*types)
+
+
 
     def prepare(self, node):
         """
@@ -92,14 +100,15 @@ class Types(ModuleAnalysis):
             return True
         return False
 
-    def node_to_id(self, n, depth=0):
+    def node_to_id(self, n, depth=()):
         if isinstance(n, ast.Name):
             return (n.id, depth)
         elif isinstance(n, ast.Subscript):
             if isinstance(n.slice, ast.Slice):
                 return self.node_to_id(n.value, depth)
             else:
-                return self.node_to_id(n.value, 1 + depth)
+                index = n.slice.value if isnum(n.slice) else None
+                return self.node_to_id(n.value, depth + (index,))
         # use alias information if any
         elif isinstance(n, ast.Call):
             for alias in self.strict_aliases[n]:
@@ -154,23 +163,30 @@ class Types(ModuleAnalysis):
             if register:
                 try:
                     node_id, depth = self.node_to_id(node)
-                    if depth > 0:
+                    if depth:
                         node = ast.Name(node_id, ast.Load(), None, None)
                         former_unary_op = unary_op
 
                         # update the type to reflect container nesting
+                        def merge_container_type(ty, index):
+                            # integral index make it possible to correctly
+                            # update tuple type
+                            if isinstance(index, int):
+                                kty = self.builder.NamedType(
+                                        'std::integral_constant<long,{}>'
+                                        .format(index))
+                                return self.builder.IndexableContainerType(kty,
+                                                                           ty)
+                            else:
+                                return self.builder.ContainerType(ty)
+
                         def unary_op(x):
-                            return reduce(lambda t, n:
-                                          self.builder.ContainerType(t),
-                                          range(depth), former_unary_op(x))
+                            return reduce(merge_container_type, depth,
+                                          former_unary_op(x))
 
                         # patch the op, as we no longer apply op,
                         # but infer content
-                        def op(*types):
-                            if len(types) == 1:
-                                return types[0]
-                            else:
-                                return self.builder.CombinedTypes(*types)
+                        op = self.combined
 
                     self.name_to_nodes[node_id].append(node)
                 except UnboundableRValue:
@@ -236,6 +252,7 @@ class Types(ModuleAnalysis):
             pass
 
     def visit_FunctionDef(self, node):
+        self.delayed_types = set()
         self.curr_locals_declaration = self.gather(
             LocalNodeDeclarations,
             node)
@@ -251,6 +268,15 @@ class Types(ModuleAnalysis):
         self.stage = 0
         self.generic_visit(node)
 
+        visited_names = {}
+        for delayed_node in self.delayed_types:
+            delayed_type = self.result[delayed_node]
+            all_types = ordered_set(self.result[ty] for ty in
+                                    self.name_to_nodes[delayed_node.id])
+            final_type = self.combined(*all_types)
+            delayed_type.final_type = final_type
+            visited_names[delayed_node.id] = final_type
+
         # and one for backward propagation
         # but this step is generally costly
         if cfg.getboolean('typing', 'enable_two_steps_typing'):
@@ -259,10 +285,13 @@ class Types(ModuleAnalysis):
 
         # propagate type information through all aliases
         for name, nodes in self.name_to_nodes.items():
-            unique_types = ordered_set(self.result[n] for n in nodes)
-            final_node = reduce(self.builder.Type.__add__, unique_types)
+            all_types = ordered_set(self.result[ty] for ty in nodes)
+            final_type = self.combined(*all_types)
             for n in nodes:
-                self.result[n] = final_node
+                if isinstance(self.result[n], self.builder.LType):
+                    self.result[n].final_type = final_type
+                else:
+                    self.result[n] = final_type
         self.current_global_declarations[node.name] = node
         # return type may be unset if the function always raises
         return_type = self.result.get(
@@ -520,10 +549,15 @@ class Types(ModuleAnalysis):
                          aliasing_type=True, register=True)
             return True
 
+    def delayed(self, node):
+        fallback_type = self.combined(*[self.result[n] for n in
+                                        self.name_to_nodes[node.id]])
+        self.delayed_types.add(node)
+        return self.builder.LType(fallback_type, node)
+
     def visit_Name(self, node):
         if node.id in self.name_to_nodes:
-            for n in self.name_to_nodes[node.id]:
-                self.combine(node, n)
+            self.result[node] = self.delayed(node)
         elif node.id in self.current_global_declarations:
             newtype = self.builder.NamedType(
                 self.current_global_declarations[node.id].name)
